@@ -1,69 +1,63 @@
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import warnings
 warnings.filterwarnings("ignore")
 
-torch.random.manual_seed(0)
-model_id = "weights/models--NousResearch--Meta-Llama-3-8B-Instruct"
-
-# Загрузка модели
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    torch_dtype="auto"
-)
-
-# Проверка что есть доступ к GPU
-assert torch.cuda.is_available(), "Модель LLama 3 работает только на GPU ..."
-device = torch.cuda.current_device()
-
-# Перенос модели на GPU
-# model = model.to(device)
+model_id = "weights/Llama-3-8B-Instruct"
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
-newline_token = tokenizer.encode("\n")[0]
-
-
-# Задаем сообщения для диалога-беседы
-messages = [
-    {"role": "assistant", "content": "Ты - талантливый ML-инженер, который специализируется на задачах компьютьерного зрения. Также ты прекрасно понимаешь русский язык и даешь ответы исключительно на русском языке, если тебя не попросят дать ответ на другом языке, например, английском."}
-]
-
-pipe = pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    device=device,
-    eos_token_id=newline_token,
-    pad_token_id=tokenizer.eos_token_id
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
 )
 
-generation_args = {
-    "max_new_tokens": 200,
-    "return_full_text": False,
-    "temperature": 0.2,
-    "do_sample": False,
-    "num_return_sequences": 1
-}
+# История диалога с моделью
+messages = [
+    {"role": "system", "content": "Ты - умный чат бот, который отвечает максимально четко и по делу на вопросы пользователя. Ответы ты даешь на том языке, на котором с тобой общается пользователь."},
+    {"role": "user", "content": "Привет! Расскажи о себе."},
+]
 
-# Реализация диалога с LLama 3-8B
-print("Assistant: Привет! Я Llama 3. Создана компанией Facebook. Я готова ответить на твои вопросы. Для завершения разговора напиши 'Пока'.")
+terminators = [
+    tokenizer.eos_token_id,
+    tokenizer.convert_tokens_to_ids("<|eot_id|>")
+]
 
+# Код диалога с моделью
 while True:
     user_input = input("User: ")
 
     message = {"role": "user", "content": user_input}
 
+    if user_input.lower() == "пока":
+        print("Bot: До свидания! Спасибо за общение.")
+        break
+
     # Добавляем в историю беседы вопрос пользователя
     messages.append(message)
 
-    if user_input.lower() == "пока":
-        print("Assistant: До свидания! Спасибо за общение.")
-        break
-
     # Ответ модели
-    answer = pipe(messages, **generation_args)
+    input_ids = tokenizer.apply_chat_template(
+    messages,
+    add_generation_prompt=True,
+    return_tensors="pt"
+    ).to(model.device)
 
-    print("Assistant: " + answer[0]['generated_text'])
+    outputs = model.generate(
+        input_ids,
+        max_new_tokens=256,
+        eos_token_id=terminators,
+        pad_token_id=tokenizer.eos_token_id,
+        do_sample=False,
+        temperature=0.2,
+        top_p=0.1
+        )
+
+    # Ответ
+    response = outputs[0][input_ids.shape[-1]:]
+    answer = tokenizer.decode(response, skip_special_tokens=True)
+
+    print("Bot: " + answer)
 
     # Добавляем в историю беседы ответ чат-бота
-    messages.append({"role": "assistant", "content": answer[0]['generated_text']})
+    messages.append({"role": "system", "content": answer})
