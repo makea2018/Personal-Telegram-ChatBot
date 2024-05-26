@@ -1,4 +1,3 @@
-from transformers import pipeline
 from huggingface_hub import snapshot_download
 
 # Модель №1 - Llama-3-8B-Instruct
