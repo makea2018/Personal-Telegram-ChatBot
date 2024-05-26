@@ -14,9 +14,15 @@ generate_configs = {
 
 
 class SaigaBot():
-    def __init__(self, model_path, chat_history, generate_configs=generate_configs):
+    def __init__(self, model_path, chat_history=[], generate_configs=generate_configs):
         # Инициализация истории чата
-        self.chat_history = chat_history
+        if chat_history:
+            self.chat_history = chat_history
+        else:
+            # Роль бота по умолчанию
+            role_prompt = {"role": "system", "content": "Ты - умный чат бот, который отвечает максимально четко и по делу на вопросы пользователя. Ответы ты даешь на том языке, на котором с тобой общается пользователь."}
+            chat_history.append(role_prompt)
+            self.chat_history = chat_history
 
         # Инициализация конфигов генерации модели
         self.generate_configs = generate_configs
@@ -73,3 +79,9 @@ class SaigaBot():
     def save_chat_history(self):
         with open('chat_history.json', 'w', encoding='utf-8') as f:
             json.dump(self.chat_history, f, ensure_ascii=False, indent=4)
+
+    # Метод для присвоения роли чат-боту (меняется изначальный промт генерации модели)
+    def change_role(self, prompt):
+        # Приведение промта в вид понятный модели
+        prompt = {"role": "system", "content": prompt}
+        self.chat_history[0] = prompt
