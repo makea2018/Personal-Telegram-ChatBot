@@ -2,3 +2,5 @@ venv
 weights
 
 __pycache__
+.xml
+.idea
