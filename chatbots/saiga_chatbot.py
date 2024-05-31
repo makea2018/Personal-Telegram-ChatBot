@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import json
@@ -13,9 +14,11 @@ generate_configs = {
 }
 
 
-class SaigaBot():
-    def __init__(self, model_path, chat_history=[], generate_configs=generate_configs):
+class SaigaBot:
+    def __init__(self, model_path, chat_history: Optional[List] = None, generate_configs: Dict = generate_configs):
         # Инициализация истории чата
+        if chat_history is None:
+            chat_history = []
         if chat_history:
             self.chat_history = chat_history
         else:
