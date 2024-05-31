@@ -9,15 +9,13 @@ generate_configs = {
     "height": 800,
     "width": 1024,
     "num_inference_steps": 50,
-    "num_images_per_prompt" : 1,
-    "guidance_scale" : 1.0,
+    "num_images_per_prompt": 1,
+    "guidance_scale": 1.0,
 }
 
-prior_path = "D:/Hugging_face_models/Diffusion models/kandinsky-2-2-prior"
-decoder_path = "D:/Hugging_face_models/Diffusion models/kandinsky-2-2-decoder"
 
 class ImageGenerator:
-    def __init__(self, prior_path: str, decoder_path: str, generate_configs: Dict):
+    def __init__(self, prior_path: str, decoder_path: str, generate_configs: Dict = generate_configs):
         # Инициализация сгенерированного изображения
         self.image = None
 
@@ -36,11 +34,14 @@ class ImageGenerator:
     # Метод для генерации картинки
     def generate_image(self, prompt: str, negative_prompt: Optional[str] = None):
         # Кодирование текста промтов
-        prompt, negative_prompt = self.pipe_prior([prompt, negative_prompt]).to_tuple()
+        if negative_prompt is None:
+            prompt, negative_prompt = self.pipe_prior(prompt).to_tuple()
+        else:
+            prompt, negative_prompt = self.pipe_prior(prompt, negative_prompt).to_tuple()
 
         # Генерация изображения
-        self.image = self.pipe(prompt_embeds=prompt, negative_prompt_embeds=negative_prompt,
-                          **generate_configs)[0]
+        self.image = self.pipe(image_embeds=prompt, negative_image_embeds=negative_prompt,
+                               **generate_configs).images[0]
 
         return self.image
 
