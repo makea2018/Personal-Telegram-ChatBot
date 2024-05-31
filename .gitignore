@@ -4,3 +4,5 @@ weights
 __pycache__
 .xml
 .idea
+
+generated_pictures
